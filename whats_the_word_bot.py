@@ -181,7 +181,7 @@ def run():
         # check if any new comments, update submissions accordingly
         comment_stream = subreddit.comments(limit=50)
         for comment in comment_stream:
-            if comment is None:
+            if comment is None or not comment.author or (comment.author and comment.author.name == 'AutoModerator'):
                 break
             # if new comment by OP
             if comment.author and comment.author.name == comment.submission.author.name:
