@@ -47,10 +47,10 @@ if not reddit.read_only:
 
 def get_posts_with_old_timestamps(status, second_limit=86400):
     old_timestamp = datetime.now().replace(tzinfo=timezone.utc).timestamp() - second_limit
-    print(old_timestamp)
+    # print(old_timestamp)
     results = db.custom_query(
         queries=[f"SELECT id, status FROM posts WHERE last_checked <= {int(old_timestamp)} AND status == '{status}'"])
-    print(results)
+    # print(results)
     if results and len(results) > 0:
         return results
     return []
