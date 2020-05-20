@@ -7,13 +7,13 @@ import sql_library as sql
 from datetime import datetime, timezone
 
 # Get at https://www.reddit.com/prefs/apps
-REDDIT_CLIENT_ID = os.environ.get('REDDIT_CLIENT_ID')
-REDDIT_CLIENT_SECRET = os.environ.get('REDDIT_CLIENT_SECRET')
-REDDIT_USERNAME = os.environ.get('REDDIT_USERNAME')
-REDDIT_PASSWORD = os.environ.get('REDDIT_PASSWORD')
+REDDIT_CLIENT_ID = ''
+REDDIT_CLIENT_SECRET = ''
+REDDIT_USERNAME = 'WhatsTheWordBot'
+REDDIT_PASSWORD = ''
 
 # Careful as you release this into the wild!
-SUB_TO_MONITOR = os.environ.get('SUBREDDIT_TO_MONITOR')
+SUB_TO_MONITOR = "whatstheword"
 
 SECONDS_UNTIL_ABANDONED_FROM_UNSOLVED = 86400  # 86400 = 24 hours in seconds
 SECONDS_UNTIL_UNKNOWN_FROM_CONTESTED = 172800  # 172800 = 48 hours in seconds
@@ -110,7 +110,8 @@ def store_entry_in_db(submission):
             return True
         return False
     except Exception as e:
-        logging.error(f"Couldn't store new submission in database. {e}")
+        # most likely issue is not unique (submission is already logged in databaase); this is fine and intended
+        logging.error(f"Couldn't store submission in database. {e}")
         return False
 
 
@@ -163,12 +164,13 @@ def run():
     After 24 hours, "unsolved" -> "abandoned" (check if solved first) (unsolved means no new comments; otherwise would be "contested")
     After 48 hours, "contested" -> "unknown" (check if solved first) (contested means someone has commented)
     """
-    clean_db()
+    # clean_db()
     subreddit = reddit.subreddit(SUB_TO_MONITOR)
-    comment_stream = subreddit.stream.comments(pause_after=-1)
-    submission_stream = subreddit.stream.submissions(pause_after=-1)
+    # comment_stream = subreddit.stream.comments(pause_after=-1)
+    # submission_stream = subreddit.stream.submissions(pause_after=-1)
     while True:
         # log new submissions to database, apply "unsolved" flair
+        submission_stream = subreddit.submissions.new(limit=10)  # if you're getting more than 10 new submissions in two seconds, you have a problem
         for submission in submission_stream:
             if submission is None:
                 break
@@ -177,11 +179,12 @@ def run():
                 if store_entry_in_db(submission=submission):
                     apply_flair(submission, text=UNSOLVED_FLAIR_TEXT, flair_id=UNSOLVED_FLAIR_ID)
         # check if any new comments, update submissions accordingly
+        comment_stream = subreddit.comments.new(limit=50)
         for comment in comment_stream:
             if comment is None:
                 break
             # if new comment by OP
-            if comment.author.name == comment.submission.author.name:
+            if comment.author and comment.author.name == comment.submission.author.name:
                 # if OP's comment is "solved", flair submission as "solved"
                 if solved_in_comment(comment):
                     try:
