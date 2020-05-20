@@ -98,6 +98,14 @@ def solved_in_comments(submission):
     return False
 
 
+def already_solved(submission):
+    return check_flair(submission=submission, flair_text=SOLVED_FLAIR_TEXT, flair_id=SOLVED_FLAIR_ID)
+
+
+def already_contested(submission):
+    return check_flair(submission=submission, flair_text=CONTESTED_FLAIR_TEXT, flair_id=CONTESTED_FLAIR_ID)
+
+
 def store_entry_in_db(submission):
     timestamp = datetime.now().replace(tzinfo=timezone.utc).timestamp()
     try:
@@ -170,13 +178,14 @@ def run():
     # submission_stream = subreddit.stream.submissions(pause_after=-1)
     while True:
         # log new submissions to database, apply "unsolved" flair
-        submission_stream = subreddit.new(limit=10)  # if you're getting more than 10 new submissions in two seconds, you have a problem
+        submission_stream = subreddit.new(
+            limit=10)  # if you're getting more than 10 new submissions in two seconds, you have a problem
         for submission in submission_stream:
             if submission is None:
                 break
             else:
                 # only update flair if successfully added to database, to avoid out-of-sync issues
-                if store_entry_in_db(submission=submission):
+                if not check_flair(submission=submission, flair_text=UNSOLVED_FLAIR_TEXT, flair_id=UNSOLVED_FLAIR_ID) and store_entry_in_db(submission=submission):
                     apply_flair(submission, text=UNSOLVED_FLAIR_TEXT, flair_id=UNSOLVED_FLAIR_ID)
         # check if any new comments, update submissions accordingly
         comment_stream = subreddit.comments(limit=50)
@@ -186,7 +195,7 @@ def run():
             # if new comment by OP
             if comment.author and comment.author.name == comment.submission.author.name:
                 # if OP's comment is "solved", flair submission as "solved"
-                if solved_in_comment(comment):
+                if not already_solved(comment.submission) and solved_in_comment(comment):
                     try:
                         # only update flair if successfully updated in database, to avoid out-of-sync issues
                         if update_db_entry(submission_id=comment.submission.id, status=SOLVED_DB):
@@ -195,11 +204,12 @@ def run():
                         logging.error(
                             f"Couldn't flair submission {comment.submission.id} as 'solved' following OP's new comment.")
                 # if OP's comment is not "solved", flair submission as "contested"
-                else:
+                elif not already_contested(comment.submission):
                     try:
                         # only update flair if successfully updated in database, to avoid out-of-sync issues
                         if update_db_entry(submission_id=comment.submission.id, status=CONTESTED_DB):
-                            apply_flair(submission=comment.submission, text=CONTESTED_FLAIR_TEXT, flair_id=CONTESTED_FLAIR_ID)
+                            apply_flair(submission=comment.submission, text=CONTESTED_FLAIR_TEXT,
+                                        flair_id=CONTESTED_FLAIR_ID)
                     except Exception as e:
                         logging.error(
                             f"Couldn't flair submission {comment.submission.id} as 'contested' following OP's new comment.")
@@ -207,12 +217,17 @@ def run():
             else:
                 try:
                     submission_entry_in_db = check_status_in_db(submission_id=comment.submission.id)
-                    if submission_entry_in_db and submission_entry_in_db[0][1] in [UNKNOWN_DB, CONTESTED_DB,
-                                                                                   UNSOLVED_DB]:
+                    if submission_entry_in_db and submission_entry_in_db[0][1] in [UNKNOWN_DB, CONTESTED_DB, UNSOLVED_DB]\
+                            and not (
+                                check_flair(submission=comment.submission, flair_text=UNKNOWN_FLAIR_TEXT, flair_id=UNKNOWN_FLAIR_ID) or
+                                check_flair(submission=comment.submission, flair_text=UNSOLVED_FLAIR_TEXT, flair_id=UNSOLVED_FLAIR_ID) or
+                                check_flair(submission=comment.submission, flair_text=CONTESTED_FLAIR_TEXT, flair_id=CONTESTED_FLAIR_ID)
+                            ):
                         try:
                             # only update flair if successfully updated in database, to avoid out-of-sync issues
                             if update_db_entry(submission_id=comment.submission.id, status=CONTESTED_DB):
-                                apply_flair(submission=comment.submission, text=CONTESTED_FLAIR_TEXT, flair_id=CONTESTED_FLAIR_ID)
+                                apply_flair(submission=comment.submission, text=CONTESTED_FLAIR_TEXT,
+                                            flair_id=CONTESTED_FLAIR_ID)
                         except Exception as e:
                             logging.error(
                                 f"Couldn't flair submission {comment.submission.id} as 'contested' following a new non-OP comment.")
@@ -228,7 +243,8 @@ def run():
                 # check comments one last time for potential solve
                 # only update flair if successfully updated in database, to avoid out-of-sync issues
                 if solved_in_comments(submission=submission) or check_flair(submission=submission,
-                                                                            flair_text=SOLVED_FLAIR_TEXT, flair_id=SOLVED_FLAIR_ID):
+                                                                            flair_text=SOLVED_FLAIR_TEXT,
+                                                                            flair_id=SOLVED_FLAIR_ID):
                     if update_db_entry(submission_id=entry[0], status=SOLVED_DB):
                         apply_flair(submission=submission, text=SOLVED_FLAIR_TEXT, flair_id=SOLVED_FLAIR_ID)
                 else:
@@ -248,7 +264,8 @@ def run():
                 # check comments one last time for potential solve
                 # only update flair if successfully updated in database, to avoid out-of-sync issues
                 if solved_in_comments(submission=submission) or check_flair(submission=submission,
-                                                                            flair_text=SOLVED_FLAIR_TEXT, flair_id=SOLVED_FLAIR_ID):
+                                                                            flair_text=SOLVED_FLAIR_TEXT,
+                                                                            flair_id=SOLVED_FLAIR_ID):
                     if update_db_entry(submission_id=entry[0], status=SOLVED_DB):
                         apply_flair(submission=submission, text=SOLVED_FLAIR_TEXT, flair_id=SOLVED_FLAIR_ID)
                 else:
