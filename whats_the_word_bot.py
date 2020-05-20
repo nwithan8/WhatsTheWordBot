@@ -170,7 +170,7 @@ def run():
     # submission_stream = subreddit.stream.submissions(pause_after=-1)
     while True:
         # log new submissions to database, apply "unsolved" flair
-        submission_stream = subreddit.submissions.new(limit=10)  # if you're getting more than 10 new submissions in two seconds, you have a problem
+        submission_stream = subreddit.new(limit=10)  # if you're getting more than 10 new submissions in two seconds, you have a problem
         for submission in submission_stream:
             if submission is None:
                 break
@@ -179,7 +179,7 @@ def run():
                 if store_entry_in_db(submission=submission):
                     apply_flair(submission, text=UNSOLVED_FLAIR_TEXT, flair_id=UNSOLVED_FLAIR_ID)
         # check if any new comments, update submissions accordingly
-        comment_stream = subreddit.comments.new(limit=50)
+        comment_stream = subreddit.comments(limit=50)
         for comment in comment_stream:
             if comment is None:
                 break
