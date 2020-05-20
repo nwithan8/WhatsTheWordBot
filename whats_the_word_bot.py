@@ -5,15 +5,15 @@ import praw
 import logging
 import sql_library as sql
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+load_dotenv()
 
-# Get at https://www.reddit.com/prefs/apps
-REDDIT_CLIENT_ID = ''
-REDDIT_CLIENT_SECRET = ''
-REDDIT_USERNAME = 'WhatsTheWordBot'
-REDDIT_PASSWORD = ''
 
-# Careful as you release this into the wild!
-SUB_TO_MONITOR = "whatstheword"
+REDDIT_CLIENT_ID = os.environ.get('ID')
+REDDIT_CLIENT_SECRET = os.environ.get('SECRET')
+REDDIT_USERNAME = os.environ.get('USERNAME')
+REDDIT_PASSWORD = os.environ.get('PASSWORD')
+SUB_TO_MONITOR = os.environ.get('SUBREDDIT')
 
 SECONDS_UNTIL_ABANDONED_FROM_UNSOLVED = 86400  # 86400 = 24 hours in seconds
 SECONDS_UNTIL_UNKNOWN_FROM_CONTESTED = 172800  # 172800 = 48 hours in seconds
