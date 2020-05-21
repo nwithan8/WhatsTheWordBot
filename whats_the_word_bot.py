@@ -204,7 +204,7 @@ def run():
                         logging.error(
                             f"Couldn't flair submission {comment.submission.id} as 'solved' following OP's new comment.")
                 # if OP's comment is not "solved", flair submission as "contested"
-                elif not already_contested(comment.submission):
+                elif not already_contested(comment.submission) and not already_solved(comment.submission):
                     try:
                         # only update flair if successfully updated in database, to avoid out-of-sync issues
                         if update_db_entry(submission_id=comment.submission.id, status=CONTESTED_DB):
