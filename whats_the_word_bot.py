@@ -93,7 +93,7 @@ def solved_in_comments(submission):
     # look for "solved" comment by OP
     submission.comments.replace_more(limit=None)
     for comment in submission.comments.list():
-        if comment.author.name == submission.author.name and solved_in_comments(submission):
+        if comment.author.name == submission.author.name and solved_in_comment(comment):
             return True
     return False
 
